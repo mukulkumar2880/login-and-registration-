@@ -1,0 +1,104 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <iomanip>
+#include <openssl/sha.h>  // For hashing (you need OpenSSL installed)
+
+using namespace std;
+
+const string CREDENTIALS_FILE = "users.txt";
+
+// Function to hash password using SHA256
+string hashPassword(const string& password) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256((unsigned char*)password.c_str(), password.size(), hash);
+
+    stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << hex << setw(2) << setfill('0') << (int)hash[i];
+    }
+    return ss.str();
+}
+
+// Registration function
+string registerUser(const string& username, const string& password) {
+    if (username.empty() || password.empty()) {
+        return "❌ Username and password cannot be empty.";
+    }
+
+    ifstream infile(CREDENTIALS_FILE);
+    string line, storedUser, storedPass;
+
+    while (getline(infile, line)) {
+        stringstream ss(line);
+        getline(ss, storedUser, ':');
+        getline(ss, storedPass);
+        if (storedUser == username) {
+            return "❌ Username already exists. Choose a different one.";
+        }
+    }
+    infile.close();
+
+    ofstream outfile(CREDENTIALS_FILE, ios::app);
+    outfile << username << ":" << hashPassword(password) << endl;
+    outfile.close();
+
+    return "✅ Registration successful!";
+}
+
+// Login function
+string loginUser(const string& username, const string& password) {
+    ifstream infile(CREDENTIALS_FILE);
+    if (!infile) {
+        return "❌ No users registered yet.";
+    }
+
+    string line, storedUser, storedPass;
+    while (getline(infile, line)) {
+        stringstream ss(line);
+        getline(ss, storedUser, ':');
+        getline(ss, storedPass);
+        if (storedUser == username && storedPass == hashPassword(password)) {
+            return "✅ Login successful!";
+        }
+    }
+    infile.close();
+
+    return "❌ Invalid username or password.";
+}
+
+int main() {
+    int choice;
+    string username, password;
+
+    while (true) {
+        cout << "\n=== Login & Registration System ===\n";
+        cout << "1. Register\n2. Login\n3. Exit\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+
+        if (choice == 1) {
+            cout << "Enter username: ";
+            cin >> username;
+            cout << "Enter password: ";
+            cin >> password;
+            cout << registerUser(username, password) << endl;
+        } 
+        else if (choice == 2) {
+            cout << "Enter username: ";
+            cin >> username;
+            cout << "Enter password: ";
+            cin >> password;
+            cout << loginUser(username, password) << endl;
+        } 
+        else if (choice == 3) {
+            cout << "Goodbye!\n";
+            break;
+        } 
+        else {
+            cout << "❌ Invalid choice. Try again.\n";
+        }
+    }
+    return 0;
+}
